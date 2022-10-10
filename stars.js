@@ -4,7 +4,7 @@ const CANVAS = document.getElementById('canvas');
 const CTX = CANVAS.getContext('2d');
 const CORNERS = [new Vector(0,0), new Vector(CANVAS.width, 0), new Vector(CANVAS.width, CANVAS.height), new Vector(0, CANVAS.height)]
 const FPS = 60;
-const ASTEROID_COUNT = 15;
+
 
     
 //in-game configuration
@@ -14,6 +14,7 @@ var fullScreen = false;
 
 //in-game variable
 const canvasCenter = new Vector(CANVAS.width/2, CANVAS.height/2)
+var ASTEROID_COUNT = 10;
 var stones = new Array(ASTEROID_COUNT);
 var stone_v = 5;
 var mouseX = 0;
@@ -127,6 +128,7 @@ function init() {
     drawBackground();
 
     //fill stones
+    stones = new Array(ASTEROID_COUNT)
     for (var i = 0; i < stones.length; i++) {
         stones[i] = createStone();
     }
@@ -225,6 +227,30 @@ function calcForNextFrame() {
     }
 
     level += 0.0005
+
+    //create asteroid per level
+    if (Number.parseInt(level) == ASTEROID_COUNT - 4) {
+        stones.push(createStone())
+        ASTEROID_COUNT++;
+    }
+    var newStones = new Array()
+    stones.forEach(stone => {
+        var collision = false;
+        var newShots = []
+        starfighter.shots.forEach(shot => {
+            
+            if(stone.radius >= Vector.delta(new Vector(stone.x, stone.y), Vector.add(shot.pos, shot.vector)).length) {
+                console.log("treffer") 
+                collision++;
+            } 
+            else {
+                newShots.push(shot)
+            }
+        });
+        starfighter.shots = newShots;
+        (collision ? newStones.push(createStone()) : newStones.push(stone))
+    })
+    stones = newStones
 }
 
 function startRendering() {
@@ -251,10 +277,15 @@ function mouseClick(event) {
             menuVisible = false;
             shouldRender = false;
             level = 1
+            ASTEROID_COUNT = 5
             init()
             renderCountdown(3)
             console.log(event.x)
         }
+
+    if (showShuttle) {
+        starfighter.shot()
+    }
 }
 
 function keyDown(event) {

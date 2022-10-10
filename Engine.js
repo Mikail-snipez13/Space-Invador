@@ -72,15 +72,17 @@ class Starfighter {
         CTX.stroke()
 
         this.shots.forEach(shot => {shot.render(); shot.fly()})
+        var newShots = new Array()
         for (var i = 0; i < this.shots.length; i++) {
-            if (this.shots[i].pos.x < -10
-                || this.shots[i].pos.x > CANVAS.width + 10
-                || this.shots[i].pos.y < -10
-                || this.shots[i].pos.y > CANVAS.height + 10) {
+            if (this.shots[i].pos.x > -10
+                && this.shots[i].pos.x < CANVAS.width + 10
+                && this.shots[i].pos.y > -10
+                && this.shots[i].pos.y < CANVAS.height + 10) {
                     //delete array item by index
-                    this.shots.pop()
+                newShots.push(this.shots[i])
             }
         }
+        this.shots = newShots
     }
 
     rotate(angle) {
