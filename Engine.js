@@ -57,19 +57,23 @@ class Starfighter {
         this.velocity = 1
     }
 
-    render() {
+    render(onlyShots=false) {
         CTX.strokeStyle = "white";
         CTX.lineWidth = 2;
-        for (var i = 0; i < this.vectors.length - 1; i++) {
-            CTX.beginPath()
-            CTX.moveTo(this.pos.x + this.vectors[i].x, this.pos.y + this.vectors[i].y);
-            CTX.lineTo(this.pos.x + this.vectors[i+1].x, this.pos.y + this.vectors[i+1].y)
+
+        if (!onlyShots) {
+            for (var i = 0; i < this.vectors.length - 1; i++) {
+                CTX.beginPath()
+                CTX.moveTo(this.pos.x + this.vectors[i].x, this.pos.y + this.vectors[i].y);
+                CTX.lineTo(this.pos.x + this.vectors[i+1].x, this.pos.y + this.vectors[i+1].y)
+                CTX.stroke()
+            }
+            CTX.beginPath() 
+            CTX.moveTo(this.pos.x + this.vectors[0].x, this.pos.y + this.vectors[0].y);
+            CTX.lineTo(this.pos.x + this.vectors[this.vectors.length-1].x, this.pos.y + this.vectors[this.vectors.length-1].y)
             CTX.stroke()
         }
-        CTX.beginPath() 
-        CTX.moveTo(this.pos.x + this.vectors[0].x, this.pos.y + this.vectors[0].y);
-        CTX.lineTo(this.pos.x + this.vectors[this.vectors.length-1].x, this.pos.y + this.vectors[this.vectors.length-1].y)
-        CTX.stroke()
+        
 
         this.shots.forEach(shot => {shot.render(); shot.fly()})
         var newShots = new Array()

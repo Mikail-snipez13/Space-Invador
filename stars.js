@@ -4,7 +4,8 @@ const CANVAS = document.getElementById('canvas');
 const CTX = CANVAS.getContext('2d');
 const CORNERS = [new Vector(0,0), new Vector(CANVAS.width, 0), new Vector(CANVAS.width, CANVAS.height), new Vector(0, CANVAS.height)]
 const FPS = 60;
-
+const HIT_TIMEOUT = 3000; //milliseconds
+const MAX_HEARTS = 3;
 
     
 //in-game configuration
@@ -26,6 +27,13 @@ var hearts = 3;
 var shouldRender = true;
 var showShuttle = false;
 var starfighter = new Starfighter(canvasCenter, 1.2)
+var gameover = false;
+
+//hit animation
+var hit = false;
+var byHitVisible = false;
+var hitAnimationTimeout = false;
+
 
 //menu
 var menuWidth = 200;
@@ -153,7 +161,27 @@ function renderFrame() {
 
     //render shuttle
     if (showShuttle) {
-        starfighter.render()
+        if (hit) {
+            if (!byHitVisible) {
+                if (!hitAnimationTimeout) {
+                    hitAnimationTimeout = true;
+                    setTimeout(() => {byHitVisible = true; hitAnimationTimeout = false}, 300)
+                    console.log('black blick')
+                }
+                starfighter.render(onlyShots=true)
+            }
+            else {
+                if (!hitAnimationTimeout) {
+                    hitAnimationTimeout = true;
+                    setTimeout(() => {byHitVisible = false; hitAnimationTimeout = false}, 300)
+                }
+                starfighter.render()
+            }
+        }
+        else {
+            starfighter.render()
+        }
+        
     }
 
     //render text
@@ -208,7 +236,7 @@ function calcForNextFrame() {
         stones[i].y = stones[i].y + stones[i].vector.y;
 
 
-        //kollision with walls
+        //collision with walls
         if (stones[i].x <= -200
             || stones[i].x >= CANVAS.width + 200 
             || stones[i].y <= -200
@@ -224,23 +252,38 @@ function calcForNextFrame() {
             starfighter.fly(0.05* delta.length)
         }
         starfighter.lookAt(getMouseVector())
+
+        //collision with asteroid and shuttle
+        stones.forEach(stone => {
+            if (stone.radius + 10 >= Vector.delta(stone.getVector(), starfighter.pos).length) {
+                if (!hit) {hearts--}
+                if (hearts == 0) {
+                    shouldRender = false
+                    gameover = true;
+                }
+                hit = true
+                setTimeout(() => hit = false, HIT_TIMEOUT)
+            }
+        })
     }
 
     level += 0.0005
 
+    
     //create asteroid per level
     if (Number.parseInt(level) == ASTEROID_COUNT - 4) {
         stones.push(createStone())
         ASTEROID_COUNT++;
     }
+
+    //collision with asteroid and shot
     var newStones = new Array()
     stones.forEach(stone => {
         var collision = false;
         var newShots = []
         starfighter.shots.forEach(shot => {
             
-            if(stone.radius >= Vector.delta(new Vector(stone.x, stone.y), Vector.add(shot.pos, shot.vector)).length) {
-                console.log("treffer") 
+            if(stone.radius >= Vector.delta(stone.getVector(), Vector.add(shot.pos, shot.vector)).length) {
                 collision++;
             } 
             else {
@@ -248,9 +291,20 @@ function calcForNextFrame() {
             }
         });
         starfighter.shots = newShots;
-        (collision ? newStones.push(createStone()) : newStones.push(stone))
+        if (collision) {
+            newStones.push(createStone())
+            if (stone.radius < 3) {points += Math.round(50*level)}
+            else if (stone.radius < 8) {points += Math.round(30*level)}
+            else if (stone.radius < 14) {points += Math.round(15*level)}
+            else {points += Math.round(5*level)}
+            
+        } 
+        else {
+            newStones.push(stone)
+        }
     })
     stones = newStones
+    
 }
 
 function startRendering() {
@@ -258,6 +312,10 @@ function startRendering() {
         if (shouldRender) {
             renderFrame();
             calcForNextFrame();
+        }
+        if (gameover) {
+            renderFrame();
+            renderGameover();
         }
     }, 1000/FPS)
 }
@@ -276,14 +334,39 @@ function mouseClick(event) {
         && menuVisible) {
             menuVisible = false;
             shouldRender = false;
+            hearts = MAX_HEARTS;
             level = 1
             ASTEROID_COUNT = 5
             init()
             renderCountdown(3)
-            console.log(event.x)
         }
 
-    if (showShuttle) {
+    if (gameover) {
+        if (CANVAS.width/2 - 22 < mouseX 
+        && mouseX < CANVAS.width/2 + 22 
+        && CANVAS.height/2 + 20 < mouseY 
+        && mouseY < CANVAS.height/2 + 40){
+            gameover = false;
+            showMenu()
+        }
+
+        if (CANVAS.width/2 - 38 < mouseX 
+        && mouseX < CANVAS.width/2 + 38 
+        && CANVAS.height/2 + 45 < mouseY 
+        && mouseY < CANVAS.height/2 + 65) {
+            menuVisible = false;
+            shouldRender = false;
+            gameover = false;
+            hearts = MAX_HEARTS;
+            level = 1
+            ASTEROID_COUNT = 5
+            init()
+            renderCountdown(3)
+        }
+    }
+     
+
+    if (showShuttle && !gameover ) {
         starfighter.shot()
     }
 }
@@ -305,22 +388,16 @@ function keyDown(event) {
                 CANVAS.height = html.clientHeight;
             }
             break;
-        case " ": (starfighter.shot() )
+        case " ": (!gameover ? starfighter.shot() : null)
+        case "p": (shouldRender ? shouldRender = false : shouldRender = true); break;
     }
 }
 
 function test() {
-    drawBackground();
-    var v = new Vector(200, 10);
-    
+    gameover = true
     setInterval(() => {
         drawBackground()
-        starfighter.render()
-        delta = Vector.delta(starfighter.pos, getMouseVector())
-        if (delta.length >= 15) {
-            starfighter.fly(0.05* delta.length)
-        }
-        starfighter.lookAt(getMouseVector())
+        
 
     }, 1000/60)
 }
@@ -337,7 +414,6 @@ function drawVector(origin, vector, width=1) {
 
 function renderCountdown(count) {
     drawBackground();
-    console.log(count)
     CTX.font = '100px monospace'
     CTX.fillStyle = 'white'
     if (count == 0) {
@@ -351,12 +427,36 @@ function renderCountdown(count) {
     if (0 < count) {
         setTimeout(() => renderCountdown(count - 1), 1000)
     }
-    
+}
+
+function renderGameover() {
+
+    //title
+    CTX.fillStyle = 'red'
+    CTX.font = '70px monospace'
+    CTX.fillText('GAME OVER', CANVAS.width/2 - 175, CANVAS.height/2 + 13)
+
+    //options
+    CTX.font = '20px monospace'
+    CTX.fillStyle = 'white';
+    (CANVAS.width/2 - 22 < mouseX && mouseX < CANVAS.width/2 + 22 && CANVAS.height/2 + 20 < mouseY && mouseY < CANVAS.height/2 + 40? CTX.fillStyle = 'red' : null) 
+    CTX.fillText('MENU', CANVAS.width/2 - 22, CANVAS.height/2 + 40)
+
+    CTX.fillStyle = 'white';
+    (CANVAS.width/2 - 38 < mouseX && mouseX < CANVAS.width/2 + 38 && CANVAS.height/2 + 45 < mouseY && mouseY < CANVAS.height/2 + 65? CTX.fillStyle = 'red' : null)
+    CTX.fillText('RESTART', CANVAS.width/2 - 38, CANVAS.height/2 + 65)
+}
+
+function showMenu() {
+    starfighter.pos = new Vector(CANVAS.width/2, CANVAS.height/2)
+    init()
+    showShuttle = false
+    menuVisible = true
+    shouldRender = true
 }
 
 function main() {
-    /* test(); */
-
+    // test(); 
     init();
     startRendering();
 }
