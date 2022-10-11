@@ -389,7 +389,7 @@ function keyDown(event) {
             }
             break;
         case " ": (!gameover ? starfighter.shot() : null)
-        case "p": (shouldRender ? shouldRender = false : shouldRender = true); break;
+        //case "p": (shouldRender ? shouldRender = false : shouldRender = true); break;
     }
 }
 
