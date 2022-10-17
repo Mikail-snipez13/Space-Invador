@@ -165,3 +165,81 @@ class Stone {
         return new Vector(this.x, this.y)
     }
 }
+
+class Box {
+    constructor() {
+        this.pos;
+        this.width;
+        this.height;
+    }
+
+    getPos() {return this.pos}
+    getWidth() {return this.width}
+    getHeight() {return this.height}
+    mouseHover() {
+        return (this.pos.x <= mouseX 
+            && mouseX <= this.pos.x + this.width 
+            && this.pos.y < mouseY 
+            && mouseY < this.pos.y + this.height)
+    }
+}
+
+class Radio extends Box {
+    constructor(pos, width, height, state, onClick) {
+        super(pos, state)
+        this.pos = pos;
+        this.width = width;
+        this.height = height;
+        this.state = state;
+        this.onClick = onClick;
+    }
+
+    render() {
+        if (this.mouseHover()) {CTX.strokeStyle = 'red'; CTX.fillStyle = 'red'} 
+        if (this.state) {
+            CTX.fillRect(this.pos.x, this.pos.y, this.width, this.height)
+            CTX.strokeStyle = 'black'
+            CTX.lineWidth = 3
+            CTX.beginPath()
+            CTX.moveTo(this.pos.x, this.pos.y)
+            CTX.lineTo(this.pos.x + this.width, this.pos.y + this.height)
+            CTX.moveTo(this.pos.x + this.width, this.pos.y)
+            CTX.lineTo(this.pos.x, this.pos.y + this.height)
+            CTX.stroke()
+        }
+        else {
+            CTX.fillRect(this.pos.x, this.pos.y, this.width, this.height)
+        }
+        CTX.strokeStyle = 'white';
+        CTX.fillStyle = 'white';
+    }
+
+    setState(state) {
+        this.state = state;
+    }
+}
+
+class Button extends Box {
+    constructor(text, pos, width, height, onClick) {
+        super(pos, width, height)
+        this.text = text;
+        this.pos = pos;
+        this.width = width;
+        this.height = height;
+        this.onClick = onClick;
+    }
+
+    render() {
+        if (this.mouseHover()) {CTX.strokeStyle = 'red'; CTX.fillStyle = 'red'}
+        CTX.fillText(this.text, this.pos.x, this.pos.y)
+        CTX.strokeStyle = 'white';
+        CTX.fillStyle = 'white';
+    }
+    
+    mouseHover() {
+        return (this.pos.x <= mouseX 
+            && mouseX <= this.pos.x + this.width
+            && mouseY < this.pos.y 
+            && this.pos.y - this.height < mouseY)
+    }
+}

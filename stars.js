@@ -6,7 +6,6 @@ const CORNERS = [new Vector(0,0), new Vector(CANVAS.width, 0), new Vector(CANVAS
 const FPS = 60;
 const HIT_TIMEOUT = 3000; //milliseconds
 const MAX_HEARTS = 3;
-
     
 //in-game configuration
 var enableMouseLines = false;
@@ -28,17 +27,24 @@ var shouldRender = true;
 var showShuttle = false;
 var starfighter = new Starfighter(canvasCenter, 1.2)
 var gameover = false;
+var menu = true;
+var game = false;
+var pause = false;
 
 //hit animation
 var hit = false;
 var byHitVisible = false;
 var hitAnimationTimeout = false;
 
-
-//menu
+//startSide
 var menuWidth = 200;
 var menuHeight = 100;
-var menuVisible = true;
+var startSide = true;
+
+//settings
+var settings = false;
+var settings_radio = []
+var settings_button = []
 
 //listener
 CANVAS.addEventListener('mousemove', mouseOver)
@@ -166,7 +172,6 @@ function renderFrame() {
                 if (!hitAnimationTimeout) {
                     hitAnimationTimeout = true;
                     setTimeout(() => {byHitVisible = true; hitAnimationTimeout = false}, 300)
-                    console.log('black blick')
                 }
                 starfighter.render(onlyShots=true)
             }
@@ -184,8 +189,8 @@ function renderFrame() {
         
     }
 
-    //render text
-    if (!menuVisible) {
+    //render text in game
+    if (game) {
         CTX.font = '20px monospace'
         CTX.fillStyle = 'white';
         CTX.fillText("Points: " + points, 20,20+24);
@@ -200,32 +205,16 @@ function renderFrame() {
     
 
     //menu
-    if (menuVisible) {
-        var menuWidth = 300;
-        var menuHeight = 100;
-
-        CTX.fillStyle = 'white'
-
-        //title
-        CTX.font = '30px arial'
-        CTX.fillText('SPACE INVADOR', ((CANVAS.width - 244)/2), ((CANVAS.height - menuHeight)/2) - 50)
-
-        //options
-        CTX.fillStyle = '#555'
-        CTX.fillRect((CANVAS.width - menuWidth)/2, (CANVAS.height - menuHeight)/2 , menuWidth, menuHeight)
-        CTX.font = '20px arial'
-        CTX.fillStyle = 'white'
-
-        if (((CANVAS.width - menuWidth)/2) + 97 < mouseX 
-        && mouseX < ((CANVAS.width - menuWidth)/2) + 197 
-        && mouseY < ((CANVAS.height - menuHeight)/2) + 25 
-        && mouseY > ((CANVAS.height - menuHeight)/2) + 5) {
-            CTX.fillStyle = "red"
+    if (menu) {
+        if (startSide) {
+        renderMenu()
         }
 
-
-        CTX.fillText('Start Game', ((CANVAS.width - menuWidth)/2) + 97, ((CANVAS.height - menuHeight)/2) + 25)
+        if (settings) {
+            renderSettings()
+        }
     }
+    
 }
 
 function calcForNextFrame() {
@@ -258,7 +247,7 @@ function calcForNextFrame() {
             if (stone.radius + 10 >= Vector.delta(stone.getVector(), starfighter.pos).length) {
                 if (!hit) {hearts--}
                 if (hearts == 0) {
-                    shouldRender = false
+                    shouldRender = false;
                     gameover = true;
                 }
                 hit = true
@@ -267,11 +256,12 @@ function calcForNextFrame() {
         })
     }
 
-    level += 0.0005
-
+    if (game) {
+        level += 0.0005
+    }
     
     //create asteroid per level
-    if (Number.parseInt(level) == ASTEROID_COUNT - 4) {
+    if (Number.parseInt(level) == ASTEROID_COUNT - 4 && !startSide && !settings) {
         stones.push(createStone())
         ASTEROID_COUNT++;
     }
@@ -293,7 +283,7 @@ function calcForNextFrame() {
         starfighter.shots = newShots;
         if (collision) {
             newStones.push(createStone())
-            if (stone.radius < 3) {points += Math.round(50*level)}
+            if (stone.radius < 3) {points += Math.round(80*level)}
             else if (stone.radius < 8) {points += Math.round(30*level)}
             else if (stone.radius < 14) {points += Math.round(15*level)}
             else {points += Math.round(5*level)}
@@ -308,16 +298,37 @@ function calcForNextFrame() {
 }
 
 function startRendering() {
-    interval = setInterval(() => {
-        if (shouldRender) {
-            renderFrame();
-            calcForNextFrame();
+    
+    if (shouldRender) {
+        renderFrame();
+        calcForNextFrame();
+    }
+
+    //menu
+    if (menu) {
+        if (startSide) {
+        renderMenu()
         }
+
+        if (settings) {
+            renderSettings()
+        }
+    }
+
+    //game
+    if (game) {
         if (gameover) {
             renderFrame();
             renderGameover();
         }
-    }, 1000/FPS)
+
+        if (pause) {
+            renderFrame();
+            renderPause();
+        }
+    }
+
+    interval = setTimeout(startRendering, 1000/FPS)
 }
 
 //listener
@@ -327,20 +338,40 @@ function mouseOver(event) {
 }
 
 function mouseClick(event) {
-    if (((CANVAS.width - menuWidth)/2) + 45 < mouseX 
-        && mouseX < ((CANVAS.width - menuWidth)/2) + 147
-        && mouseY < ((CANVAS.height - menuHeight)/2) + 25 
-        && mouseY > ((CANVAS.height - menuHeight)/2) + 5
-        && menuVisible) {
-            menuVisible = false;
-            shouldRender = false;
-            hearts = MAX_HEARTS;
-            level = 1
-            ASTEROID_COUNT = 5
-            init()
-            renderCountdown(3)
-        }
+    if (menu) {
+        if (startSide) {
+            if (((CANVAS.width - menuWidth)/2) + 45 < mouseX 
+                && mouseX < ((CANVAS.width - menuWidth)/2) + 147
+                && mouseY < ((CANVAS.height - menuHeight)/2) + 25 
+                && mouseY > ((CANVAS.height - menuHeight)/2) + 5) 
+            {
+                startGame() 
+            }
 
+            if (CANVAS.width/2 - 38 < mouseX 
+                && mouseX < CANVAS.width/2 + 38 
+                && CANVAS.height/2 - 20 < mouseY 
+                && mouseY < CANVAS.height/2) 
+            {
+                showSettings()
+            }
+        }
+    }
+
+    if (settings) {
+        settings_radio.forEach(radio => {
+            if (radio.mouseHover()) {
+                radio.onClick()
+            }
+        })
+        settings_button.forEach(btn => {
+            if (btn.mouseHover()) {
+                btn.onClick()
+            }
+        })
+        
+    }
+    
     if (gameover) {
         if (CANVAS.width/2 - 22 < mouseX 
         && mouseX < CANVAS.width/2 + 22 
@@ -354,14 +385,7 @@ function mouseClick(event) {
         && mouseX < CANVAS.width/2 + 38 
         && CANVAS.height/2 + 45 < mouseY 
         && mouseY < CANVAS.height/2 + 65) {
-            menuVisible = false;
-            shouldRender = false;
-            gameover = false;
-            hearts = MAX_HEARTS;
-            level = 1
-            ASTEROID_COUNT = 5
-            init()
-            renderCountdown(3)
+            startGame()
         }
     }
      
@@ -376,20 +400,27 @@ function keyDown(event) {
         case "l": (enableMouseLines ? enableMouseLines = false : enableMouseLines = true); break;
         case "i": (enableDebugMode ? enableDebugMode = false : enableDebugMode = true); break;
         case "f": 
-            if (fullScreen) {
-                fullScreen = false
-                CANVAS.width = 600;
-                CANVAS.height = 600;
-            }
-            else {
-                fullScreen = true 
-                var html = document.getElementsByTagName('html')[0]
-                CANVAS.width = html.clientWidth;
-                CANVAS.height = html.clientHeight;
-            }
+            switchFullscreen()
             break;
-        case " ": (!gameover ? starfighter.shot() : null)
-        //case "p": (shouldRender ? shouldRender = false : shouldRender = true); break;
+        case " ": (!gameover ? starfighter.shot() : null); break;
+        case "Escape": 
+            if (game && !gameover) {
+                if (shouldRender) {shouldRender = false; pause = true}else{shouldRender = true; pause = false}
+            } break;
+    }
+}
+
+function switchFullscreen() {
+    if (fullScreen) {
+        fullScreen = false
+        CANVAS.width = 600;
+        CANVAS.height = 600;
+    }
+    else {
+        fullScreen = true 
+        var html = document.getElementsByTagName('html')[0]
+        CANVAS.width = html.clientWidth;
+        CANVAS.height = html.clientHeight;
     }
 }
 
@@ -397,7 +428,7 @@ function test() {
     gameover = true
     setInterval(() => {
         drawBackground()
-        
+        renderSettings()
 
     }, 1000/60)
 }
@@ -410,6 +441,24 @@ function drawVector(origin, vector, width=1) {
     nextPoint = Vector.add(origin, vector);
     CTX.lineTo(nextPoint.x, nextPoint.y);
     CTX.stroke();
+}
+
+function renderPause() {
+    CTX.fillStyle = 'white';
+    CTX.font = '50px monospace';
+    
+    CTX.fillText('PAUSE', CANVAS.width/2 - 69, CANVAS.height/2 + 15)
+}
+
+function renderGrid() {
+    CTX.strokeStyle = 'white';
+    CTX.lineWidth = 1;
+    CTX.beginPath()
+    CTX.moveTo(CANVAS.width/2, 0)
+    CTX.lineTo(CANVAS.width/2, CANVAS.height)
+    CTX.moveTo(0, CANVAS.height/2)
+    CTX.lineTo(CANVAS.width, CANVAS.height/2)
+    CTX.stroke()
 }
 
 function renderCountdown(count) {
@@ -427,6 +476,19 @@ function renderCountdown(count) {
     if (0 < count) {
         setTimeout(() => renderCountdown(count - 1), 1000)
     }
+}
+
+function startGame() {
+    startSide = false;
+    shouldRender = false;
+    hearts = MAX_HEARTS;
+    points = 0;
+    game = true;
+    gameover = false;
+    level = 1
+    ASTEROID_COUNT = 5
+    init()
+    renderCountdown(3)
 }
 
 function renderGameover() {
@@ -448,11 +510,69 @@ function renderGameover() {
 }
 
 function showMenu() {
+    if (!settings) {
+        init()
+    }
     starfighter.pos = new Vector(CANVAS.width/2, CANVAS.height/2)
-    init()
+    game = false
     showShuttle = false
-    menuVisible = true
+    startSide = true
     shouldRender = true
+    settings = false
+}
+
+function showSettings() {
+    startSide = false
+    settings = true
+}
+
+function renderMenu() {
+    var menuWidth = 300;
+    var menuHeight = 100;
+
+    CTX.fillStyle = 'white'
+
+    //title
+    CTX.font = '30px arial'
+    CTX.fillText('SPACE INVADOR', ((CANVAS.width - 244)/2), ((CANVAS.height - menuHeight)/2) - 50)
+
+    //options
+    CTX.fillStyle = '#555'
+    CTX.fillRect((CANVAS.width - menuWidth)/2, (CANVAS.height - menuHeight)/2 , menuWidth, menuHeight)
+    CTX.font = '20px arial'
+    CTX.fillStyle = 'white'
+
+    if (((CANVAS.width - menuWidth)/2) + 97 < mouseX 
+    && mouseX < ((CANVAS.width - menuWidth)/2) + 197 
+    && mouseY < ((CANVAS.height - menuHeight)/2) + 25 
+    && mouseY > ((CANVAS.height - menuHeight)/2) + 5) {
+        CTX.fillStyle = "red"
+    }
+    CTX.fillText('Start Game', ((CANVAS.width - menuWidth)/2) + 97, ((CANVAS.height - menuHeight)/2) + 25)
+
+    CTX.fillStyle = 'white';
+    (CANVAS.width/2 - 38 < mouseX && mouseX < CANVAS.width/2 + 38 && CANVAS.height/2 - 20 < mouseY && mouseY < CANVAS.height/2? CTX.fillStyle = 'red' : null)
+    CTX.fillText('Settings', CANVAS.width/2 - 38, CANVAS.height/2)
+}
+
+function renderSettings() {
+    CTX.fillStyle = '#555'
+    CTX.strokeStyle = 'white'
+    CTX.font = '30px monospace'
+    CTX.lineWidth = 1;
+
+    settings_radio = [new Radio(new Vector(CANVAS.width/2 + 60, CANVAS.height/2 - 58), 20, 20, fullScreen, switchFullscreen)]
+    settings_button = [new Button('Back', new Vector(CANVAS.width/2 - 24, CANVAS.height/2 - 10), 48, 20, showMenu)]
+
+    CTX.fillRect(CANVAS.width/2 - 150, CANVAS.height/2 - 65, 300, 100)
+    CTX.fillStyle = 'white';
+
+    CTX.fillText("Settings", CANVAS.width/2 - 66, CANVAS.height/2 - 80)
+    CTX.font = '20px arial'
+    CTX.fillText('Full-screen', CANVAS.width/2 - 90, CANVAS.height/2 - 40);
+
+    settings_radio.forEach(radio => radio.render())
+    settings_button.forEach(btn => btn.render())
 }
 
 function main() {
