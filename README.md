@@ -1,2 +1,2 @@
 # Space-Invador
-![image](https://user-images.githubusercontent.com/69754486/226626080-adf0e966-b6e8-42f4-900c-69a39118e68e.png)
+![image](https://user-images.githubusercontent.com/69754486/226626284-adb0f158-d8f9-4455-88eb-c742632e4e2e.png)
